@@ -43,6 +43,19 @@ function addDevice(type, params) {
   device.start();
 }
 
+function getDeviceStatuses() {
+  const deviceStatuses = {};
+  for (const type in devices) {
+    deviceStatuses[type] = {};
+    const deviceList = devices[type];
+    for (const id in deviceList) {
+      const device = deviceList[id];
+      deviceStatuses[type][id] = device.getStatus();
+    }
+  }
+  return deviceStatuses;
+}
+
 // Adding devices
 addDevice("tempSensor", { id: 1 });
 addDevice("humidSensor", { id: 1 });
@@ -56,18 +69,7 @@ controlCenter.start();
 // GET devices list with statuses
 // curl localhost:3333/devices
 app.get("/devices", (req, res) => {
-  const deviceStatuses = {};
-  for (const type in devices) {
-    deviceStatuses[type] = {};
-    const deviceList = devices[type];
-    for (const id in deviceList) {
-      const device = deviceList[id];
-      deviceStatuses[type][id] = device.getStatus();
-    }
-  }
-  res.status(200).send({
-    devices: deviceStatuses,
-  });
+  res.status(200).send(getDeviceStatuses());
 });
 
 // Start the express server
