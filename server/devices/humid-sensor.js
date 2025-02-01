@@ -13,13 +13,10 @@ class HumidSensor {
   start() {
     setInterval(() => {
       this.humidity = (35 + Math.random() * 40).toFixed(1);
-      this.client.publish(this.topic, this.humidity);
+      const status = JSON.stringify({ humidity: this.humidity });
+      this.client.publish(this.topic, status);
       console.log(`[${this.topic}] Humidity: ${this.humidity} %rh`);
     }, 5000);
-  }
-
-  getStatus() {
-    return { humidity: this.humidity };
   }
 }
 
