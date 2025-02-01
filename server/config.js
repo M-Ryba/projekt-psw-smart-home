@@ -24,6 +24,7 @@ const config = {
       max: 60,
     },
   },
+  rooms: ["Living Room", "Bedroom", "Kitchen", "Bathroom"],
 };
 
 module.exports = config;
