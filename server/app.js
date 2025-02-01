@@ -17,30 +17,40 @@ const devices = {
   fanSwitches: {},
 };
 
+function getNextId() {
+  const allIds = Object.values(devices)
+    .flatMap((deviceType) => Object.keys(deviceType))
+    .map(Number);
+  // Return the next available ID or 1 if there are no devices
+  return allIds.length ? Math.max(...allIds) + 1 : 1;
+}
+
 function addDevice(type, params) {
   let device;
+  const assignedId = getNextId();
   switch (type) {
     case "tempSensor":
-      device = new TempSensor(params.id);
-      devices.tempSensors[params.id] = device;
+      device = new TempSensor(assignedId);
+      devices.tempSensors[assignedId] = device;
       break;
     case "humidSensor":
-      device = new HumidSensor(params.id);
-      devices.humidSensors[params.id] = device;
+      device = new HumidSensor(assignedId);
+      devices.humidSensors[assignedId] = device;
       break;
     case "heatSwitch":
-      device = new HeatSwitch(params.id, params.heaterId);
-      devices.heatSwitches[params.id] = device;
+      device = new HeatSwitch(assignedId, params.heaterId);
+      devices.heatSwitches[assignedId] = device;
       break;
     case "fanSwitch":
-      device = new FanSwitch(params.id, params.fanId);
-      devices.fanSwitches[params.id] = device;
+      device = new FanSwitch(assignedId, params.fanId);
+      devices.fanSwitches[assignedId] = device;
       break;
     default:
       console.error("Unknown device type:", type);
       return;
   }
   device.start();
+  return device;
 }
 
 function getDeviceStatuses() {
@@ -57,10 +67,10 @@ function getDeviceStatuses() {
 }
 
 // Adding devices
-addDevice("tempSensor", { id: 1 });
-addDevice("humidSensor", { id: 1 });
-addDevice("heatSwitch", { id: 1, heaterId: 1 });
-addDevice("fanSwitch", { id: 1, fanId: 1 });
+addDevice("tempSensor");
+addDevice("humidSensor");
+addDevice("heatSwitch", { heaterId: 1 });
+addDevice("fanSwitch", { fanId: 1 });
 
 const ControlCenter = require("./control-center.js");
 const controlCenter = new ControlCenter();
