@@ -11,8 +11,6 @@ const config = {
     humidity: "home/sensor/humidity",
     heater: "home/heater",
     fan: "home/fan",
-    heaterSwitch: "home/switch/heater",
-    fanSwitch: "home/switch/fan",
   },
   threshold: {
     temperature: {

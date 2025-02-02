@@ -1,21 +1,23 @@
 "use strict";
 const express = require("express");
+const mqtt = require("mqtt");
 const config = require("./config.js");
 
 const app = express();
+const client = mqtt.connect(config.mqtt.host);
 
 // Device types
 const TempSensor = require("./devices/temp-sensor.js");
 const HumidSensor = require("./devices/humid-sensor.js");
-const HeatSwitch = require("./devices/heat-switch.js");
-const FanSwitch = require("./devices/fan-switch.js");
+const Heater = require("./devices/heater.js");
+const Fan = require("./devices/fan.js");
 
 // List of available device types
 const deviceTypes = {
   tempSensor: TempSensor,
   humidSensor: HumidSensor,
-  heatSwitch: HeatSwitch,
-  fanSwitch: FanSwitch,
+  heater: Heater,
+  fan: Fan,
 };
 
 // Arrays that holds all devices
@@ -44,7 +46,7 @@ function addDevice(type, params) {
     name: params.name,
     type,
     room: params.room,
-    device: deviceInstance,
+    topic: deviceInstance.topic,
   };
   devices.push(device);
   deviceInstance.start();
@@ -60,39 +62,59 @@ addDevice("humidSensor", {
   name: "Living Room Humidity Sensor",
   room: "Living Room",
 });
-addDevice("heatSwitch", {
-  name: "Living Room Heater Switch",
+addDevice("heater", {
+  name: "Living Room Heater",
   room: "Living Room",
-  heaterId: 1,
 });
-addDevice("fanSwitch", {
-  name: "Living Room Fan Switch",
+addDevice("fan", {
+  name: "Living Room Fan",
   room: "Living Room",
-  fanId: 1,
+});
+
+const deviceStatuses = {};
+
+client.on("connect", () => {
+  devices.forEach((device) => {
+    client.subscribe(device.topic);
+  });
+});
+
+client.on("message", (topic, message) => {
+  const device = devices.find((device) => device.topic === topic);
+  if (device) {
+    deviceStatuses[device.id] = {
+      id: device.id,
+      name: device.name,
+      type: device.type,
+      room: device.room,
+      parameters: JSON.parse(message.toString()),
+    };
+  }
 });
 
 function getAllDeviceStatuses() {
-  return devices.map(({ id, name, type, room, device }) => ({
-    id,
-    name,
-    type,
-    room,
-    parameters: device.getStatus(),
+  return devices.map((device) => ({
+    id: device.id,
+    name: device.name,
+    type: device.type,
+    room: device.room,
+    parameters: deviceStatuses[device.id]?.parameters || {},
   }));
 }
 
 function getDeviceStatus(id) {
-  const foundDevice = devices.find((device) => device.id === parseInt(id));
-  if (foundDevice) {
-    const { id, name, type, room, device } = foundDevice;
-    return { id, name, type, room, parameters: device.getStatus() };
+  const device = devices.find((device) => device.id === parseInt(id));
+  if (device) {
+    return {
+      id: device.id,
+      name: device.name,
+      type: device.type,
+      room: device.room,
+      parameters: deviceStatuses[device.id]?.parameters || {},
+    };
   }
   return null;
 }
-
-const ControlCenter = require("./control-center.js");
-const controlCenter = new ControlCenter();
-controlCenter.start();
 
 // GET all device statuses
 // curl localhost:3333/devices
