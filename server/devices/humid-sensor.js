@@ -10,11 +10,15 @@ class HumidSensor {
     this.humidity = null;
   }
 
+  publishStatus = () => {
+    const status = JSON.stringify({ humidity: this.humidity });
+    this.client.publish(`${this.topic}/status`, status);
+  };
+
   start() {
     setInterval(() => {
       this.humidity = (35 + Math.random() * 40).toFixed(1);
-      const status = JSON.stringify({ humidity: this.humidity });
-      this.client.publish(this.topic, status);
+      this.publishStatus();
       console.log(`[${this.topic}] Humidity: ${this.humidity} %rh`);
     }, 5000);
   }

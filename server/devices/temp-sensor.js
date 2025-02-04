@@ -10,11 +10,15 @@ class TempSensor {
     this.temperature = null;
   }
 
+  publishStatus = () => {
+    const status = JSON.stringify({ temperature: this.temperature });
+    this.client.publish(`${this.topic}/status`, status);
+  };
+
   start() {
     setInterval(() => {
       this.temperature = (17 + Math.random() * 15).toFixed(1);
-      const status = JSON.stringify({ temperature: this.temperature });
-      this.client.publish(this.topic, status);
+      this.publishStatus();
       console.log(`[${this.topic}] Temperature: ${this.temperature} °C`);
     }, 10000);
   }

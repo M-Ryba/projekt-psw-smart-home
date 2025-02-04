@@ -11,31 +11,33 @@ class Heater {
     this.state = "OFF";
   }
 
+  publishStatus = () => {
+    const status = JSON.stringify({ state: this.state });
+    this.client.publish(`${this.topic}/status`, status);
+  };
+
   start() {
     this.client.on("connect", () => {
       this.client.subscribe(this.topic);
+      this.publishStatus();
     });
-
-    const publishStatus = () => {
-      const status = JSON.stringify({ state: this.state });
-      this.client.publish(this.topic, status);
-    };
 
     // Receive messages
     this.client.on("message", (topic, message) => {
-      message = message.toString();
-      if (message === "ON") {
-        console.log(`[${this.topic}] Turning ON`);
-        this.state = "ON";
-        publishStatus();
-      } else if (message === "OFF") {
-        console.log(`[${this.topic}] Turning OFF`);
-        this.state = "OFF";
-        publishStatus();
+      const data = JSON.parse(message.toString());
+      if (data.state === "ON" || data.state === "OFF") {
+        console.log(`[${this.topic}] Turning ${data.state}`);
+        this.state = data.state;
+        this.publishStatus();
       } else {
         console.log(`[${this.topic}] Invalid command: ${message}`);
       }
     });
+
+    // Simulate a device startup delay
+    setTimeout(() => {
+      this.publishStatus();
+    }, 2000);
   }
 }
 
