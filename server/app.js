@@ -57,6 +57,17 @@ function addDevice(type, params) {
   return device;
 }
 
+function removeDevice(id) {
+  const index = devices.findIndex((device) => device.id === id);
+  if (index === -1) return false;
+
+  const device = devices[index];
+  client.unsubscribe(`${device.topic}/status`);
+  delete deviceStatuses[device.id];
+  devices.splice(index, 1);
+  return true;
+}
+
 client.on("connect", () => {
   devices.forEach((device) => {
     client.subscribe(`${device.topic}/status`);
@@ -185,6 +196,17 @@ app.post("/devices", (req, res) => {
     return res.status(201).send(device);
   } else {
     return res.status(500).send("Failed to create device");
+  }
+});
+
+// Delete a device
+// curl -X DELETE localhost:3333/devices/0
+app.delete("/devices/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  if (removeDevice(id)) {
+    res.status(200).send(`Device with ID ${id} successfully removed`);
+  } else {
+    res.status(404).send(`Device with ID ${id} not found`);
   }
 });
 
