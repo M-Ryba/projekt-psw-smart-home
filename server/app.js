@@ -35,11 +35,11 @@ function getNextId() {
 function addDevice(type, params) {
   const DeviceClass = deviceTypes[type];
   if (!DeviceClass) {
-    console.error("Unknown device type:", type);
+    console.log("Unknown device type:", type);
     return null;
   }
   if (params.room && !config.rooms.includes(params.room)) {
-    console.error("Unknown room:", params.room);
+    console.log("Unknown room:", params.room);
     return null;
   }
   const assignedId = getNextId();
@@ -163,6 +163,28 @@ app.patch("/devices/:id", (req, res) => {
       );
   } else {
     return res.status(400).send("Parameters not provided");
+  }
+});
+
+// Create a new device
+// curl -X POST -H "Content-Type: application/json" -d '{"type":"fan","name":"Bedroom Fan","room":"Bedroom"}' localhost:3333/devices
+app.post("/devices", (req, res) => {
+  const { type, name, room } = req.body;
+
+  if (!type || !name || !room) {
+    return res.status(400).send("Missing required parameters");
+  }
+  if (!deviceTypes[type]) {
+    return res.status(400).send(`Invalid device type: ${type}`);
+  }
+  if (!config.rooms.includes(room)) {
+    return res.status(400).send(`Invalid room: ${room}`);
+  }
+  const device = addDevice(type, { name, room });
+  if (device) {
+    return res.status(201).send(device);
+  } else {
+    return res.status(500).send("Failed to create device");
   }
 });
 
