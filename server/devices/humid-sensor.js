@@ -7,7 +7,7 @@ class HumidSensor {
   constructor(id) {
     this.client = mqtt.connect(config.mqtt.host);
     this.topic = `${config.topic.humidity}/${id}`;
-    this.humidity = null;
+    this.humidity = 40;
   }
 
   publishStatus = () => {
@@ -16,6 +16,7 @@ class HumidSensor {
   };
 
   start() {
+    this.publishStatus();
     setInterval(() => {
       this.humidity = (35 + Math.random() * 40).toFixed(1);
       this.publishStatus();

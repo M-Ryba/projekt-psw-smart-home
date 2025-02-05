@@ -7,7 +7,7 @@ class TempSensor {
   constructor(id) {
     this.client = mqtt.connect(config.mqtt.host);
     this.topic = `${config.topic.temperature}/${id}`;
-    this.temperature = null;
+    this.temperature = 20;
   }
 
   publishStatus = () => {
@@ -16,6 +16,7 @@ class TempSensor {
   };
 
   start() {
+    this.publishStatus();
     setInterval(() => {
       this.temperature = (17 + Math.random() * 15).toFixed(1);
       this.publishStatus();
