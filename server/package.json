@@ -1,9 +1,10 @@
 {
-  "name": "lab6",
+  "name": "smart_home_server",
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "mqtt": "npx aedes start"
   },
   "keywords": [],
   "author": "",
@@ -12,5 +13,8 @@
   "dependencies": {
     "express": "^4.21.2",
     "mqtt": "^5.10.3"
+  },
+  "devDependencies": {
+    "aedes-cli": "^0.8.0"
   }
 }
