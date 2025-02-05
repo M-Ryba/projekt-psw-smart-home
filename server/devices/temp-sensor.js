@@ -6,7 +6,7 @@ const config = require("../config.js");
 class TempSensor {
   constructor(id) {
     this.client = mqtt.connect(config.mqtt.host);
-    this.topic = `${config.topic.temperature}/${id}`;
+    this.topic = `${config.topics.temperature}/${id}`;
     this.temperature = 20;
   }
 

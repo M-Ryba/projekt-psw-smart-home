@@ -9,22 +9,22 @@ const deviceTypes = {
   tempSensor: {
     class: require("./devices/temp-sensor.js"),
     displayName: "Temperature Sensor",
-    topic: config.topic.temperature,
+    topic: config.topics.temperature,
   },
   humidSensor: {
     class: require("./devices/humid-sensor.js"),
     displayName: "Humidity Sensor",
-    topic: config.topic.humidity,
+    topic: config.topics.humidity,
   },
   heater: {
     class: require("./devices/heater.js"),
     displayName: "Heater",
-    topic: config.topic.heater,
+    topic: config.topics.heater,
   },
   fan: {
     class: require("./devices/fan.js"),
     displayName: "Fan",
-    topic: config.topic.fan,
+    topic: config.topics.fan,
   },
 };
 
@@ -140,11 +140,11 @@ mqttc.on("connect", () => {
   devices.forEach((device) => {
     mqttc.subscribe(`${device.topic}/status`);
   });
-  mqttc.subscribe(`${config.topic.device}/add`);
+  mqttc.subscribe(`${config.topics.main}/add`);
 });
 
 mqttc.on("message", (topic, message) => {
-  if (topic === `${config.topic.device}/add`) {
+  if (topic === `${config.topics.main}/add`) {
     const device = JSON.parse(message.toString());
     addDevice(device.type, device);
     broadcastDeviceUpdate();

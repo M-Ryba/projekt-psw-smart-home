@@ -6,7 +6,7 @@ const config = require("../config.js");
 class Fan {
   constructor(id) {
     this.client = mqtt.connect(config.mqtt.host);
-    this.topic = `${config.topic.fan}/${id}`;
+    this.topic = `${config.topics.fan}/${id}`;
     this.id = id;
     this.state = "OFF";
   }

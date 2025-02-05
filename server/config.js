@@ -4,23 +4,13 @@ const config = {
   mqtt: {
     host: "mqtt://localhost",
   },
-  topic: {
+  topics: {
     main: "home",
     log: "home/log",
     temperature: "home/sensor/temperature",
     humidity: "home/sensor/humidity",
     heater: "home/heater",
     fan: "home/fan",
-  },
-  threshold: {
-    temperature: {
-      min: 18,
-      max: 23,
-    },
-    humidity: {
-      min: 40,
-      max: 60,
-    },
   },
   rooms: ["Living Room", "Bedroom", "Kitchen", "Bathroom"],
 };

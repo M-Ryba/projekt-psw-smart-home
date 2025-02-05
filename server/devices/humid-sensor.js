@@ -6,7 +6,7 @@ const config = require("../config.js");
 class HumidSensor {
   constructor(id) {
     this.client = mqtt.connect(config.mqtt.host);
-    this.topic = `${config.topic.humidity}/${id}`;
+    this.topic = `${config.topics.humidity}/${id}`;
     this.humidity = 40;
   }
 
