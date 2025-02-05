@@ -2,11 +2,64 @@
 const express = require("express");
 const mqtt = require("mqtt");
 const config = require("./config.js");
+const WebSocket = require("ws");
 
 const app = express();
-app.use(express.json()); // Add this line to parse JSON request bodies
+app.use(express.json());
+
+// CORS
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  next();
+});
 
 const client = mqtt.connect(config.mqtt.host);
+
+// WebSocket server
+const wss = new WebSocket.Server({ port: 3334 });
+
+// WebSocket clients array
+const clients = [];
+
+wss.on("connection", (ws) => {
+  clients.push(ws);
+
+  // Send initial data (devices and rooms)
+  ws.send(
+    JSON.stringify({
+      type: "init",
+      data: {
+        devices: getAllDeviceStatuses(),
+        rooms: config.rooms,
+      },
+    })
+  );
+
+  // Remove disconnected clients
+  ws.on("close", () => {
+    const index = clients.indexOf(ws);
+    if (index !== -1) {
+      clients.splice(index, 1);
+    }
+  });
+});
+
+// Broadcast to all connected clients
+function broadcastDeviceUpdate() {
+  const message = JSON.stringify({
+    type: "devices",
+    data: getAllDeviceStatuses(),
+  });
+
+  for (let i = 0; i < clients.length; i++) {
+    const client = clients[i];
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  }
+}
 
 // Device types
 const TempSensor = require("./devices/temp-sensor.js");
@@ -22,7 +75,7 @@ const deviceTypes = {
   fan: Fan,
 };
 
-// Arrays that hold all devices and their statuses
+// Devices and their statuses array
 const devices = [];
 const deviceStatuses = {};
 
@@ -79,6 +132,7 @@ client.on("message", (topic, message) => {
   if (topic === `${config.topic.device}/add`) {
     const device = JSON.parse(message.toString());
     addDevice(device.type, device);
+    broadcastDeviceUpdate();
   } else {
     const device = devices.find((device) => `${device.topic}/status` === topic);
     if (device) {
@@ -89,6 +143,7 @@ client.on("message", (topic, message) => {
         room: device.room,
         parameters: JSON.parse(message.toString()),
       };
+      broadcastDeviceUpdate();
     }
   }
 });
@@ -152,6 +207,12 @@ app.get("/devices/:id", (req, res) => {
   }
 });
 
+// GET available rooms
+// curl localhost:3333/rooms
+app.get("/rooms", (req, res) => {
+  res.status(200).send(config.rooms);
+});
+
 // Update device parameters by ID
 // curl -X PATCH -H "Content-Type: application/json" -d '{"state": "ON"}' localhost:3333/devices/2
 app.patch("/devices/:id", (req, res) => {
@@ -165,6 +226,7 @@ app.patch("/devices/:id", (req, res) => {
   if (data) {
     const topic = `${device.topic}`;
     client.publish(topic, JSON.stringify(data));
+    broadcastDeviceUpdate();
     return res
       .status(200)
       .send(
@@ -193,6 +255,7 @@ app.post("/devices", (req, res) => {
   }
   const device = addDevice(type, { name, room });
   if (device) {
+    broadcastDeviceUpdate();
     return res.status(201).send(device);
   } else {
     return res.status(500).send("Failed to create device");
@@ -204,6 +267,7 @@ app.post("/devices", (req, res) => {
 app.delete("/devices/:id", (req, res) => {
   const id = parseInt(req.params.id);
   if (removeDevice(id)) {
+    broadcastDeviceUpdate();
     res.status(200).send(`Device with ID ${id} successfully removed`);
   } else {
     res.status(404).send(`Device with ID ${id} not found`);
