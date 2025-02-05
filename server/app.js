@@ -4,6 +4,35 @@ const mqtt = require("mqtt");
 const config = require("./config.js");
 const WebSocket = require("ws");
 
+// List of available device types
+const deviceTypes = {
+  tempSensor: {
+    class: require("./devices/temp-sensor.js"),
+    displayName: "Temperature Sensor",
+    topic: config.topic.temperature,
+  },
+  humidSensor: {
+    class: require("./devices/humid-sensor.js"),
+    displayName: "Humidity Sensor",
+    topic: config.topic.humidity,
+  },
+  heater: {
+    class: require("./devices/heater.js"),
+    displayName: "Heater",
+    topic: config.topic.heater,
+  },
+  fan: {
+    class: require("./devices/fan.js"),
+    displayName: "Fan",
+    topic: config.topic.fan,
+  },
+};
+
+// Devices and their statuses array
+const devices = [];
+const deviceStatuses = {};
+
+// Express app
 const app = express();
 app.use(express.json());
 
@@ -62,24 +91,6 @@ function broadcastDeviceUpdate() {
   }
 }
 
-// Device types
-const TempSensor = require("./devices/temp-sensor.js");
-const HumidSensor = require("./devices/humid-sensor.js");
-const Heater = require("./devices/heater.js");
-const Fan = require("./devices/fan.js");
-
-// List of available device types
-const deviceTypes = {
-  tempSensor: TempSensor,
-  humidSensor: HumidSensor,
-  heater: Heater,
-  fan: Fan,
-};
-
-// Devices and their statuses array
-const devices = [];
-const deviceStatuses = {};
-
 function getNextId() {
   const allIds = devices.map((device) => device.id);
   // Return the biggest ID+1 or 0 if there are no devices
@@ -87,27 +98,30 @@ function getNextId() {
 }
 
 function addDevice(type, params) {
-  const DeviceClass = deviceTypes[type];
-  if (!DeviceClass) {
-    console.log("Unknown device type:", type);
-    return null;
-  }
   if (params.room && !config.rooms.includes(params.room)) {
     console.log("Unknown room:", params.room);
     return null;
   }
+
+  const deviceType = deviceTypes[type];
+  if (!deviceType) {
+    console.log("Unknown device type:", type);
+    return null;
+  }
+
   const assignedId = getNextId();
-  const deviceInstance = new DeviceClass(assignedId, params);
+  const deviceInstance = new deviceType.class(assignedId, params);
   const device = {
     id: assignedId,
     name: params.name,
-    type,
+    type: type,
+    typeDisplayName: deviceType.displayName,
     room: params.room,
-    topic: deviceInstance.topic,
+    topic: `${deviceType.topic}/${assignedId}`,
   };
   devices.push(device);
   deviceInstance.start();
-  mqttc.subscribe(`${device.topic}/status`);
+  mqttc.subscribe(`${deviceType.topic}/${assignedId}/status`);
   return device;
 }
 
@@ -154,6 +168,7 @@ function getAllDeviceStatuses() {
     id: device.id,
     name: device.name,
     type: device.type,
+    typeDisplayName: device.typeDisplayName,
     room: device.room,
     parameters: deviceStatuses[device.id]?.parameters || {},
   }));
@@ -191,13 +206,13 @@ addDevice("fan", {
   room: "Living Room",
 });
 
-// GET all device statuses
+// Get all device statuses (GET)
 // curl localhost:3333/devices
 app.get("/devices", (req, res) => {
   res.status(200).send(getAllDeviceStatuses());
 });
 
-// GET specific device status by ID
+// Get specific device status by ID (GET)
 // curl localhost:3333/devices/0
 app.get("/devices/:id", (req, res) => {
   const deviceStatus = getDeviceStatus(req.params.id);
@@ -208,13 +223,13 @@ app.get("/devices/:id", (req, res) => {
   }
 });
 
-// GET available rooms
+// Get available rooms (GET)
 // curl localhost:3333/rooms
 app.get("/rooms", (req, res) => {
   res.status(200).send(config.rooms);
 });
 
-// Update device parameters by ID
+// Update device parameters by ID (PATCH)
 // curl -X PATCH -H "Content-Type: application/json" -d '{"state": "ON"}' localhost:3333/devices/2
 app.patch("/devices/:id", (req, res) => {
   const device = devices.find(
@@ -240,7 +255,7 @@ app.patch("/devices/:id", (req, res) => {
   }
 });
 
-// Create a new device
+// Create a new device (POST)
 // curl -X POST -H "Content-Type: application/json" -d '{"type":"fan","name":"Bedroom Fan","room":"Bedroom"}' localhost:3333/devices
 app.post("/devices", (req, res) => {
   const { type, name, room } = req.body;
@@ -263,7 +278,7 @@ app.post("/devices", (req, res) => {
   }
 });
 
-// Delete a device
+// Delete a device (DELETE)
 // curl -X DELETE localhost:3333/devices/0
 app.delete("/devices/:id", (req, res) => {
   const id = parseInt(req.params.id);
