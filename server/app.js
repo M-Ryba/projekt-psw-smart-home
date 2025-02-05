@@ -15,7 +15,8 @@ app.use((req, res, next) => {
   next();
 });
 
-const client = mqtt.connect(config.mqtt.host);
+// MQTT client
+const mqttc = mqtt.connect(config.mqtt.host);
 
 // WebSocket server
 const wss = new WebSocket.Server({ port: 3334 });
@@ -106,7 +107,7 @@ function addDevice(type, params) {
   };
   devices.push(device);
   deviceInstance.start();
-  client.subscribe(`${device.topic}/status`);
+  mqttc.subscribe(`${device.topic}/status`);
   return device;
 }
 
@@ -115,20 +116,20 @@ function removeDevice(id) {
   if (index === -1) return false;
 
   const device = devices[index];
-  client.unsubscribe(`${device.topic}/status`);
+  mqttc.unsubscribe(`${device.topic}/status`);
   delete deviceStatuses[device.id];
   devices.splice(index, 1);
   return true;
 }
 
-client.on("connect", () => {
+mqttc.on("connect", () => {
   devices.forEach((device) => {
-    client.subscribe(`${device.topic}/status`);
+    mqttc.subscribe(`${device.topic}/status`);
   });
-  client.subscribe(`${config.topic.device}/add`);
+  mqttc.subscribe(`${config.topic.device}/add`);
 });
 
-client.on("message", (topic, message) => {
+mqttc.on("message", (topic, message) => {
   if (topic === `${config.topic.device}/add`) {
     const device = JSON.parse(message.toString());
     addDevice(device.type, device);
@@ -225,7 +226,7 @@ app.patch("/devices/:id", (req, res) => {
   const data = req.body;
   if (data) {
     const topic = `${device.topic}`;
-    client.publish(topic, JSON.stringify(data));
+    mqttc.publish(topic, JSON.stringify(data));
     broadcastDeviceUpdate();
     return res
       .status(200)
