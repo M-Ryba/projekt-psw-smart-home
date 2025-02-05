@@ -2,7 +2,7 @@
 
 const config = {
   mqtt: {
-    host: "mqtt://localhost",
+    host: "mqtt://localhost:1883",
   },
   topics: {
     main: "home",
