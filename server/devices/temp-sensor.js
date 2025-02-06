@@ -2,6 +2,7 @@
 
 const mqtt = require("mqtt");
 const config = require("../config.js");
+const logger = require("../logger.js");
 
 class TempSensor {
   constructor(id) {
@@ -20,7 +21,7 @@ class TempSensor {
     setInterval(() => {
       this.temperature = (17 + Math.random() * 15).toFixed(1);
       this.publishStatus();
-      console.log(`[${this.topic}] Temperature: ${this.temperature} °C`);
+      logger.verbose(`[${this.topic}] Temperature: ${this.temperature} °C`);
     }, 10000);
   }
 }

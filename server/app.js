@@ -4,6 +4,7 @@ const mqtt = require("mqtt");
 const config = require("./config.js");
 const deviceTypes = require("./device-types.js");
 const WebSocket = require("ws");
+const logger = require("./logger.js");
 
 // Devices and their statuses array
 const devices = [];
@@ -61,11 +62,27 @@ function broadcastDeviceUpdate() {
     data: getAllDeviceStatuses(),
   });
 
+  let failedClients = 0;
   for (let i = 0; i < clients.length; i++) {
     const client = clients[i];
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
+    try {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    } catch (error) {
+      failedClients++;
+      logger.error("Failed to broadcast to client:", {
+        clientIndex: i,
+        error: error.message,
+      });
     }
+  }
+
+  if (failedClients > 0) {
+    logger.warn("Broadcast partially failed:", {
+      total: clients.length,
+      failed: failedClients,
+    });
   }
 }
 
@@ -77,13 +94,13 @@ function getNextId() {
 
 function addDevice(type, params) {
   if (params.room && !config.rooms.includes(params.room)) {
-    console.log("Unknown room:", params.room);
+    logger.error("Unknown room:", { room: params.room });
     return null;
   }
 
   const deviceType = deviceTypes[type];
   if (!deviceType) {
-    console.log("Unknown device type:", type);
+    logger.error("Unknown device type:", { type });
     return null;
   }
 
@@ -100,21 +117,35 @@ function addDevice(type, params) {
   devices.push(device);
   deviceInstance.start();
   mqttc.subscribe(`${deviceType.topic}/${assignedId}/status`);
+  logger.info("Device added successfully", { device });
   return device;
 }
 
 function removeDevice(id) {
   const index = devices.findIndex((device) => device.id === id);
-  if (index === -1) return false;
+  if (index === -1) {
+    logger.error("Failed to remove device:", {
+      id,
+      reason: "Device not found",
+    });
+    return false;
+  }
 
-  const device = devices[index];
-  mqttc.unsubscribe(`${device.topic}/status`);
-  delete deviceStatuses[device.id];
-  devices.splice(index, 1);
-  return true;
+  try {
+    const device = devices[index];
+    mqttc.unsubscribe(`${device.topic}/status`);
+    delete deviceStatuses[device.id];
+    devices.splice(index, 1);
+    logger.info("Device removed successfully:", { id });
+    return true;
+  } catch (error) {
+    logger.error("Error removing device:", { id, error: error.message });
+    return false;
+  }
 }
 
 mqttc.on("connect", () => {
+  logger.info("MQTT client connected");
   devices.forEach((device) => {
     mqttc.subscribe(`${device.topic}/status`);
   });
@@ -122,22 +153,38 @@ mqttc.on("connect", () => {
 });
 
 mqttc.on("message", (topic, message) => {
-  if (topic === `${config.topics.main}/add`) {
-    const device = JSON.parse(message.toString());
-    addDevice(device.type, device);
-    broadcastDeviceUpdate();
-  } else {
-    const device = devices.find((device) => `${device.topic}/status` === topic);
-    if (device) {
-      deviceStatuses[device.id] = {
-        id: device.id,
-        name: device.name,
-        type: device.type,
-        room: device.room,
-        parameters: JSON.parse(message.toString()),
-      };
+  try {
+    if (topic === `${config.topics.main}/add`) {
+      const device = JSON.parse(message.toString());
+      logger.info("Adding device via MQTT", { device });
+      addDevice(device.type, device);
       broadcastDeviceUpdate();
+    } else {
+      const device = devices.find(
+        (device) => `${device.topic}/status` === topic
+      );
+      if (device) {
+        const parameters = JSON.parse(message.toString());
+        deviceStatuses[device.id] = {
+          id: device.id,
+          name: device.name,
+          type: device.type,
+          room: device.room,
+          parameters,
+        };
+        logger.verbose("Device status updated:", {
+          deviceId: device.id,
+          parameters,
+        });
+        broadcastDeviceUpdate();
+      }
     }
+  } catch (error) {
+    logger.error("Error processing MQTT message:", {
+      topic,
+      message: message.toString(),
+      error: error.message,
+    });
   }
 });
 
@@ -268,7 +315,17 @@ app.delete("/devices/:id", (req, res) => {
   }
 });
 
+// MQTT error logging
+mqttc.on("error", (error) => {
+  logger.error("MQTT error:", { error: error.message });
+});
+
+// WebSocket error logging
+wss.on("error", (error) => {
+  logger.error("WebSocket server error:", { error: error.message });
+});
+
 // Start the express server
 app.listen(3333, () => {
-  console.log("Smart Home server is running on port 3333");
+  logger.info("Smart Home server is running on port 3333");
 });

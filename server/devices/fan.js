@@ -2,6 +2,7 @@
 
 const mqtt = require("mqtt");
 const config = require("../config.js");
+const logger = require("../logger.js");
 
 class Fan {
   constructor(id) {
@@ -26,11 +27,11 @@ class Fan {
     this.client.on("message", (topic, message) => {
       const data = JSON.parse(message.toString());
       if (data.state === "ON" || data.state === "OFF") {
-        console.log(`[${this.topic}] Turning ${data.state}`);
+        logger.verbose(`[${this.topic}] Turning ${data.state}`);
         this.state = data.state;
         this.publishStatus();
       } else {
-        console.log(`[${this.topic}] Invalid command: ${message}`);
+        logger.error(`[${this.topic}] Invalid command`, { message });
       }
     });
 

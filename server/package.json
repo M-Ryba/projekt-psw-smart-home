@@ -12,7 +12,8 @@
   "description": "",
   "dependencies": {
     "express": "^4.21.2",
-    "mqtt": "^5.10.3"
+    "mqtt": "^5.10.3",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "aedes-cli": "^0.8.0"

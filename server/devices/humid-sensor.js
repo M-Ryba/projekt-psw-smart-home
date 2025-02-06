@@ -2,6 +2,7 @@
 
 const mqtt = require("mqtt");
 const config = require("../config.js");
+const logger = require("../logger.js");
 
 class HumidSensor {
   constructor(id) {
@@ -20,7 +21,7 @@ class HumidSensor {
     setInterval(() => {
       this.humidity = (35 + Math.random() * 40).toFixed(1);
       this.publishStatus();
-      console.log(`[${this.topic}] Humidity: ${this.humidity} %rh`);
+      logger.verbose(`[${this.topic}] Humidity: ${this.humidity} %rh`);
     }, 5000);
   }
 }
