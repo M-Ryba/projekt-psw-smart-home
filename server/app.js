@@ -6,7 +6,7 @@ const deviceTypes = require("./device-types.js");
 const WebSocket = require("ws");
 const logger = require("./logger.js");
 
-// Devices and their statuses array
+// Devices and their statuses storage
 const devices = [];
 const deviceStatuses = {};
 
@@ -255,6 +255,21 @@ app.get("/devices/:id", (req, res) => {
   } else {
     res.status(404).send(`Device with ID ${req.params.id} not found`);
   }
+});
+
+// Search devices by name pattern (GET)
+// curl localhost:3333/search?name=Living
+app.get("/search", (req, res) => {
+  const namePattern = req.query.name;
+  if (!namePattern) {
+    return res.status(400).send("Name pattern is required");
+  }
+  const regex = new RegExp(namePattern, "i");
+  const matchingDevices = devices.filter((device) => regex.test(device.name));
+  if (matchingDevices.length === 0) {
+    return res.status(404).send("No devices found");
+  }
+  res.status(200).send(matchingDevices);
 });
 
 // Get available rooms (GET)
