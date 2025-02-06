@@ -164,6 +164,7 @@ async function addDevice() {
     }
 
     // Clear form fields after adding a device
+    document.getElementById("deviceType").value = "";
     document.getElementById("deviceName").value = "";
     document.getElementById("deviceRoom").value = "";
   } catch (error) {
