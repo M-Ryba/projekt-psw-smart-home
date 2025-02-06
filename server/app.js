@@ -31,8 +31,13 @@ const wss = new WebSocket.Server({ port: 3334 });
 // WebSocket clients array
 const clients = [];
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
+  const clientIp = req.socket.remoteAddress;
   clients.push(ws);
+  logger.info("WebSocket client connected", {
+    clientIp,
+    totalClients: clients.length,
+  });
 
   // Send initial data (devices and rooms)
   ws.send(
@@ -51,6 +56,10 @@ wss.on("connection", (ws) => {
     const index = clients.indexOf(ws);
     if (index !== -1) {
       clients.splice(index, 1);
+      logger.info("WebSocket client disconnected", {
+        clientIp,
+        remainingClients: clients.length,
+      });
     }
   });
 });
