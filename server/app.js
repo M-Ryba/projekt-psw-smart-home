@@ -38,6 +38,7 @@ wss.on("connection", (ws) => {
     JSON.stringify({
       type: "init",
       data: {
+        deviceTypes,
         devices: getAllDeviceStatuses(),
         rooms: config.rooms,
       },
