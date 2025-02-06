@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Home Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js"></script>
+  </head>
+  <body>
+    <h1>Smart Home Dashboard</h1>
+
+    <div class="add-device-form">
+      <h2>Add New Device</h2>
+      <select id="deviceType">
+        <option value="" disabled selected>Select a device type</option>
+      </select>
+      <input type="text" id="deviceName" placeholder="Device Name" />
+      <select id="deviceRoom">
+        <option value="" disabled selected>Select a room</option>
+      </select>
+      <button onclick="addDevice()">Add Device</button>
+    </div>
+
+    <div id="devices" class="device-grid"></div>
+  </body>
+</html>
