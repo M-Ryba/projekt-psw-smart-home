@@ -377,3 +377,6 @@ test
 
 # MQTT Server
 MQTT Server
+
+# Data directory
+data

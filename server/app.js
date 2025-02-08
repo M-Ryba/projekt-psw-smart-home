@@ -5,6 +5,7 @@ const config = require("./config.js");
 const deviceTypes = require("./device-types.js");
 const WebSocket = require("ws");
 const logger = require("./logger.js");
+const storage = require("./storage.js");
 
 // Devices and their statuses storage
 const devices = [];
@@ -127,6 +128,7 @@ function addDevice(type, params) {
   deviceInstance.start();
   mqttc.subscribe(`${deviceType.topic}/${assignedId}/status`);
   logger.info("Device added successfully", { device });
+  storage.saveDevices(devices);
   return device;
 }
 
@@ -146,11 +148,21 @@ function removeDevice(id) {
     delete deviceStatuses[device.id];
     devices.splice(index, 1);
     logger.info("Device removed successfully:", { id });
+    storage.saveDevices(devices);
     return true;
   } catch (error) {
     logger.error("Error removing device:", { id, error: error.message });
     return false;
   }
+}
+
+// Load stored devices
+const savedDevices = storage.loadDevices();
+for (const saved of savedDevices) {
+  addDevice(saved.type, {
+    name: saved.name,
+    room: saved.room,
+  });
 }
 
 mqttc.on("connect", () => {
@@ -221,24 +233,6 @@ function getDeviceStatus(id) {
   }
   return null;
 }
-
-// Adding example devices
-addDevice("tempSensor", {
-  name: "Living Room Temperature Sensor",
-  room: "Living Room",
-});
-addDevice("humidSensor", {
-  name: "Living Room Humidity Sensor",
-  room: "Living Room",
-});
-addDevice("heater", {
-  name: "Living Room Heater",
-  room: "Living Room",
-});
-addDevice("fan", {
-  name: "Living Room Fan",
-  room: "Living Room",
-});
 
 // Get all device statuses (GET)
 // curl localhost:3333/devices
