@@ -173,5 +173,14 @@ async function addDevice() {
   }
 }
 
+function handleLogout() {
+  // Close WebSocket connection if it's open
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.close();
+  }
+  // Redirect to login page
+  window.location.href = "../index.html";
+}
+
 // Initialize WebSocket connection when page loads
 document.addEventListener("DOMContentLoaded", connectWebSocket);
