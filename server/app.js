@@ -417,13 +417,16 @@ app.post("/login", (req, res) => {
   if (!username || !password) {
     return res.status(400).send("Missing username or password");
   }
+
   const account = accounts.find(
     (acc) => acc.username === username && acc.password === password
   );
+
   if (!account) {
     return res.status(401).send("Invalid credentials");
   }
-  res.status(200).send("Login successful");
+
+  return res.status(200).send("Login successful");
 });
 
 // MQTT error logging
