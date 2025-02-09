@@ -1,6 +1,7 @@
 "use strict";
 const express = require("express");
 const mqtt = require("mqtt");
+const bcrypt = require("bcrypt");
 const config = require("./config.js");
 const deviceTypes = require("./device-types.js");
 const WebSocket = require("ws");
@@ -356,30 +357,37 @@ curl -X POST http://localhost:3333/accounts/register \
     "password": "testpass123"
   }'
 */
-app.post("/accounts/register", (req, res) => {
+app.post("/accounts/register", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).send("Missing username or password");
   }
 
-  // Check if username already exists
   const existingAccount = accounts.find((acc) => acc.username === username);
   if (existingAccount) {
     return res.status(409).send("Username already exists");
   }
 
-  const newId = accounts.length
-    ? Math.max(...accounts.map((a) => a.id)) + 1
-    : 0;
-  const newAccount = { id: newId, username, password };
-  accounts.push(newAccount);
-  storage.saveAccounts(accounts);
-  logger.info("New account created:", { newAccount });
-  return res.status(201).json(newAccount);
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newId = accounts.length
+      ? Math.max(...accounts.map((a) => a.id)) + 1
+      : 0;
+    const newAccount = { id: newId, username, password: hashedPassword };
+    accounts.push(newAccount);
+    storage.saveAccounts(accounts);
+    logger.info("New account created:", { username });
+    return res
+      .status(201)
+      .json({ id: newAccount.id, username: newAccount.username });
+  } catch (error) {
+    logger.error("Error creating account:", { error: error.message });
+    return res.status(500).send("Error creating account");
+  }
 });
 
 // Update account password (PATCH)
-app.patch("/accounts/reset", (req, res) => {
+app.patch("/accounts/reset", async (req, res) => {
   const { username, oldPassword, newPassword } = req.body;
   if (!username || !oldPassword || !newPassword) {
     return res
@@ -392,12 +400,13 @@ app.patch("/accounts/reset", (req, res) => {
     return res.status(404).send("Account not found");
   }
 
-  if (account.password !== oldPassword) {
-    return res.status(401).send("Current password is incorrect");
-  }
-
   try {
-    account.password = newPassword;
+    const isValidPassword = await bcrypt.compare(oldPassword, account.password);
+    if (!isValidPassword) {
+      return res.status(401).send("Current password is incorrect");
+    }
+
+    account.password = await bcrypt.hash(newPassword, 10);
     storage.saveAccounts(accounts);
     logger.info("Password updated successfully:", { username });
     return res.status(200).send("Password updated successfully");
@@ -424,21 +433,27 @@ app.delete("/accounts/:id", (req, res) => {
 });
 
 // Login (POST)
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).send("Missing username or password");
   }
 
-  const account = accounts.find(
-    (acc) => acc.username === username && acc.password === password
-  );
-
+  const account = accounts.find((acc) => acc.username === username);
   if (!account) {
     return res.status(401).send("Invalid credentials");
   }
 
-  return res.status(200).send("Login successful");
+  try {
+    const isValidPassword = await bcrypt.compare(password, account.password);
+    if (!isValidPassword) {
+      return res.status(401).send("Invalid credentials");
+    }
+    return res.status(200).send("Login successful");
+  } catch (error) {
+    logger.error("Login error:", { error: error.message });
+    return res.status(500).send("Error during login");
+  }
 });
 
 // MQTT error logging
