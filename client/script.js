@@ -1,3 +1,5 @@
+const API_URL = "http://localhost:3333";
+
 async function handleLogin(event) {
   event.preventDefault();
   const username = document.getElementById("username").value;
@@ -5,7 +7,7 @@ async function handleLogin(event) {
   const errorElement = document.getElementById("errorMessage");
 
   try {
-    const response = await fetch("http://localhost:3333/login", {
+    const response = await fetch(`${API_URL}/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -46,7 +48,7 @@ async function handleRegister(event) {
   }
 
   try {
-    const response = await fetch("http://localhost:3333/accounts/register", {
+    const response = await fetch(`${API_URL}/accounts/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -76,7 +78,7 @@ async function handlePasswordReset(event) {
   const errorElement = document.getElementById("resetError");
 
   try {
-    const response = await fetch("http://localhost:3333/accounts/reset", {
+    const response = await fetch(`${API_URL}/accounts/reset`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
