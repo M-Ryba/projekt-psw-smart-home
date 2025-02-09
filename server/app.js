@@ -33,6 +33,19 @@ const wss = new WebSocket.Server({ port: 3334 });
 // WebSocket clients array
 const clients = [];
 
+function broadcastClientCount() {
+  const message = JSON.stringify({
+    type: "clients",
+    data: clients.length,
+  });
+
+  clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
+
 wss.on("connection", (ws, req) => {
   const clientIp = req.socket.remoteAddress;
   clients.push(ws);
@@ -40,6 +53,8 @@ wss.on("connection", (ws, req) => {
     clientIp,
     totalClients: clients.length,
   });
+
+  broadcastClientCount();
 
   // Send initial data (devices and rooms)
   ws.send(
@@ -62,6 +77,7 @@ wss.on("connection", (ws, req) => {
         clientIp,
         remainingClients: clients.length,
       });
+      broadcastClientCount();
     }
   });
 });

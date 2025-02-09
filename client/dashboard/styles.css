@@ -66,6 +66,17 @@ button {
   margin-bottom: 20px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+#activeClients {
+  color: #666;
+  font-weight: bold;
+}
+
 .logout-btn {
   background-color: #f44336;
   color: white;

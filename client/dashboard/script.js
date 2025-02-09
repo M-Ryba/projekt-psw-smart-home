@@ -14,6 +14,10 @@ function connectWebSocket() {
       displayDevices(message.data.devices);
       populateRoomList(message.data.rooms);
       populateDeviceTypes(message.data.deviceTypes);
+    } else if (message.type === "clients") {
+      document.getElementById(
+        "activeClients"
+      ).textContent = `Active clients: ${message.data}`;
     } else {
       console.log("Unknown WebSocket message type:", message.type);
     }
