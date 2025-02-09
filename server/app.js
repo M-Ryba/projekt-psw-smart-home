@@ -349,18 +349,25 @@ app.get("/accounts/:id", (req, res) => {
 
 // Create a new account (POST)
 /*
-curl -X POST http://localhost:3333/accounts \
+curl -X POST http://localhost:3333/accounts/register \
 -H "Content-Type: application/json" \
   -d '{
     "username": "testuser",
     "password": "testpass123"
   }'
 */
-app.post("/accounts", (req, res) => {
+app.post("/accounts/register", (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).send("Missing username or password");
   }
+
+  // Check if username already exists
+  const existingAccount = accounts.find((acc) => acc.username === username);
+  if (existingAccount) {
+    return res.status(409).send("Username already exists");
+  }
+
   const newId = accounts.length
     ? Math.max(...accounts.map((a) => a.id)) + 1
     : 0;
@@ -371,31 +378,36 @@ app.post("/accounts", (req, res) => {
   return res.status(201).json(newAccount);
 });
 
-// Update account password by ID (PATCH)
-/*
-curl -X PATCH http://localhost:3333/accounts/0 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "oldPassword": "testpass123",
-    "newPassword": "newpass123"
-  }'
-*/
-app.patch("/accounts/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  const account = accounts.find((acc) => acc.id === id);
+// Update account password (PATCH)
+app.patch("/accounts/reset", (req, res) => {
+  const { username, oldPassword, newPassword } = req.body;
+  if (!username || !oldPassword || !newPassword) {
+    return res
+      .status(400)
+      .send("Missing username, old password, or new password");
+  }
+
+  const account = accounts.find((acc) => acc.username === username);
   if (!account) {
-    return res.status(404).send(`Account with ID ${id} not found`);
+    return res.status(404).send("Account not found");
   }
-  const { oldPassword, newPassword } = req.body;
-  if (!oldPassword || !newPassword) {
-    return res.status(400).send("Missing old or new password");
-  }
+
   if (account.password !== oldPassword) {
-    return res.status(400).send("Invalid old password");
+    return res.status(401).send("Current password is incorrect");
   }
-  account.password = newPassword;
-  storage.saveAccounts(accounts);
-  return res.status(200).json("Password updated successfully");
+
+  try {
+    account.password = newPassword;
+    storage.saveAccounts(accounts);
+    logger.info("Password updated successfully:", { username });
+    return res.status(200).send("Password updated successfully");
+  } catch (error) {
+    logger.error("Failed to update password:", {
+      username,
+      error: error.message,
+    });
+    return res.status(500).send("Failed to update password");
+  }
 });
 
 // Delete an account (DELETE)
