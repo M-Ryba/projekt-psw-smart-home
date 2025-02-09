@@ -327,10 +327,88 @@ app.delete("/devices/:id", (req, res) => {
   const id = parseInt(req.params.id);
   if (removeDevice(id)) {
     broadcastDeviceUpdate();
-    res.status(200).send(`Device with ID ${id} successfully removed`);
+    return res.status(200).send(`Device with ID ${id} successfully removed`);
   } else {
-    res.status(404).send(`Device with ID ${id} not found`);
+    return res.status(404).send(`Device with ID ${id} not found`);
   }
+});
+
+// Load accounts from storage
+let accounts = storage.loadAccounts();
+
+// Get specific account by ID (GET)
+// curl http://localhost:3333/accounts/0
+app.get("/accounts/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const account = accounts.find((acc) => acc.id === id);
+  if (!account) {
+    return res.status(404).send(`Account with ID ${id} not found`);
+  }
+  return res.status(200).json(account);
+});
+
+// Create a new account (POST)
+/*
+curl -X POST http://localhost:3333/accounts \
+-H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "password": "testpass123"
+  }'
+*/
+app.post("/accounts", (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).send("Missing username or password");
+  }
+  const newId = accounts.length
+    ? Math.max(...accounts.map((a) => a.id)) + 1
+    : 0;
+  const newAccount = { id: newId, username, password };
+  accounts.push(newAccount);
+  storage.saveAccounts(accounts);
+  logger.info("New account created:", { newAccount });
+  return res.status(201).json(newAccount);
+});
+
+// Update account password by ID (PATCH)
+/*
+curl -X PATCH http://localhost:3333/accounts/0 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "oldPassword": "testpass123",
+    "newPassword": "newpass123"
+  }'
+*/
+app.patch("/accounts/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const account = accounts.find((acc) => acc.id === id);
+  if (!account) {
+    return res.status(404).send(`Account with ID ${id} not found`);
+  }
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) {
+    return res.status(400).send("Missing old or new password");
+  }
+  if (account.password !== oldPassword) {
+    return res.status(400).send("Invalid old password");
+  }
+  account.password = newPassword;
+  storage.saveAccounts(accounts);
+  return res.status(200).json("Password updated successfully");
+});
+
+// Delete an account (DELETE)
+// curl -X DELETE http://localhost:3333/accounts/0
+app.delete("/accounts/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = accounts.findIndex((acc) => acc.id === id);
+  if (index === -1) {
+    return res.status(404).send(`Account with ID ${id} not found`);
+  }
+  accounts.splice(index, 1);
+  storage.saveAccounts(accounts);
+  res.status(200).send(`Account with ID ${id} deleted`);
 });
 
 // MQTT error logging
