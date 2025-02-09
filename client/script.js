@@ -46,7 +46,7 @@ async function handleRegister(event) {
   }
 
   try {
-    const response = await fetch("http://localhost:3333/accounts", {
+    const response = await fetch("http://localhost:3333/accounts/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -88,12 +88,13 @@ async function handlePasswordReset(event) {
       }),
     });
 
+    const message = await response.text();
+
     if (response.ok) {
       showSection("loginForm");
       alert("Password reset successful! Please login with your new password.");
     } else {
-      const error = await response.text();
-      errorElement.textContent = error || "Password reset failed";
+      errorElement.textContent = message || "Password reset failed";
       errorElement.style.display = "block";
     }
   } catch (error) {
